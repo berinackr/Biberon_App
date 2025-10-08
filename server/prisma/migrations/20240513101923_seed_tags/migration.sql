@@ -1,0 +1,17 @@
+INSERT INTO "tag" ("id","name") VALUES (1,'Sağlık');
+INSERT INTO "tag" ("id","name") VALUES (2,'Doğum');
+INSERT INTO "tag" ("id","name") VALUES (3,'Doğum Hikayeleri');
+INSERT INTO "tag" ("id","name") VALUES (4,'Beslenme');
+INSERT INTO "tag" ("id","name") VALUES (5,'Gebelik');
+INSERT INTO "tag" ("id","name") VALUES (6, 'Doktor & Hastane');
+INSERT INTO "tag" ("id","name") VALUES (7, 'Ürün Değerlendirme');
+INSERT INTO "tag" ("id","name") VALUES (8, 'Kişisel Bakım');
+INSERT INTO "tag" ("id","name") VALUES (9, 'Cinsellik');
+INSERT INTO "tag" ("id","name") VALUES (10, 'İsimler');
+INSERT INTO "tag" ("id","name") VALUES (11, 'Spor');
+INSERT INTO "tag" ("id","name") VALUES (12, 'Kadın Hastalıkları');
+INSERT INTO "tag" ("id","name") VALUES (13, 'Çoğul Gebelik');
+INSERT INTO "tag" ("id","name") VALUES (14, 'Anket');
+INSERT INTO "tag" ("id","name") VALUES (15, 'Öneri');
+INSERT INTO "tag" ("id","name") VALUES (16, 'Gündem');
+INSERT INTO "tag" ("id","name") VALUES (17, 'Alışveriş');
