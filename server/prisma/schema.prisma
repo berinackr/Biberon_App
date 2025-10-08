@@ -1,0 +1,369 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator kysely {
+  provider        = "prisma-kysely"
+  output          = "../src/database"
+  fileName        = "types.ts"
+  enumFileName    = "enums.ts"
+  camelCase       = true
+  previewFeatures = ["views"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                      String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email                   String                @unique
+  password                String?               @db.Char(60)
+  provider                provider              @default(LOCAL)
+  role                    role                  @default(USER)
+  createdAt               DateTime              @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt               DateTime              @default(now()) @map("updated_at") @db.Timestamptz(3)
+  emailVerified           Boolean               @default(false) @map("email_verified")
+  socialId                String?               @unique @map("social_id")
+  username                String                @unique
+  displayName             String                @map("display_name")
+  avatarPath              String?               @map("avatar_path")
+  avatarUpdatedAt         DateTime?             @map("avatar_updated_at") @db.Timestamptz(3)
+  avatarUploadRequestedAt DateTime?             @map("avatar_upload_requested_at") @db.Timestamptz(3)
+  sessions                Session[]
+  Fcmtoken                Fcmtoken?
+  verification            VerificationRequest?
+  passwordReset           PasswordResetRequest?
+  Profile                 Profile?
+  UserAgreement           UserAgreement?
+  Posts                   Post[]
+  Comment                 Comment[]
+  PostVote                PostVote[]
+  CommentVote             CommentVote[]
+  BookmarkedPost          BookmarkedPost[]
+
+  @@map("user")
+}
+
+model VerificationRequest {
+  id        Int      @id @default(autoincrement())
+  code      String
+  expires   DateTime @db.Timestamptz(3)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @default(now()) @map("updated_at") @db.Timestamptz(3)
+  retry     Int      @default(0)
+  userId    String   @unique @map("user_id") @db.Uuid
+  status    status   @default(PENDING)
+  User      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("verification_request")
+}
+
+model PasswordResetRequest {
+  id        Int      @id @default(autoincrement())
+  token     String   @unique
+  expires   DateTime @db.Timestamptz(3)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @default(now()) @map("updated_at") @db.Timestamptz(3)
+  retry     Int      @default(0)
+  userId    String   @unique @map("user_id") @db.Uuid
+  status    status   @default(PENDING)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("password_reset_request")
+}
+
+model Profile {
+  id               Int             @id @default(autoincrement())
+  userId           String          @unique @map("user_id") @db.Uuid
+  user             User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  cityId           Int?            @map("city_id")
+  city             City?           @relation(fields: [cityId], references: [id], onDelete: Cascade)
+  name             String?
+  bio              String?
+  specializationId Int?            @map("specialization_id")
+  specialization   Specialization? @relation(fields: [specializationId], references: [id], onDelete: Cascade)
+  dateOfBirth      DateTime?       @map("date_of_birth") @db.Timestamptz(3)
+  isPregnant       Boolean?        @default(false) @map("is_pregnant")
+  isParent         Boolean?        @default(false) @map("is_parent")
+  babies           Baby[]
+  pregnancies      Pregnancy[]
+
+  @@index([cityId])
+  @@index([specializationId])
+  @@map("profile")
+}
+
+model Pregnancy {
+  id             Int           @id @default(autoincrement())
+  profileId      Int           @map("profile_id")
+  profile        Profile       @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  endDate        DateTime?     @map("end_date") @db.Timestamptz(3)
+  dueDate        DateTime      @map("due_date") @db.Timestamptz(3)
+  lastPeriodDate DateTime?     @map("last_period_date") @db.Timestamptz(3)
+  birthGiven     Boolean       @default(false) @map("birth_given")
+  deliveryType   deliveryType? @default(UNKNOWN) @map("delivery_type")
+  type           pregnancyType @default(SINGLE)
+  isActive       Boolean       @default(true) @map("is_active")
+  notes          String?
+  fetuses        Fetus[]
+
+  @@index([profileId])
+  @@index([birthGiven, profileId])
+  @@index([isActive, profileId])
+  @@map("pregnancy")
+}
+
+model Fetus {
+  id          Int       @id @default(autoincrement())
+  pregnancyId Int       @map("pregnancy_id")
+  pregnancy   Pregnancy @relation(fields: [pregnancyId], references: [id], onDelete: Cascade)
+  gender      gender    @default(UNKNOWN)
+
+  @@index([pregnancyId])
+  @@map("fetus")
+}
+
+model Baby {
+  id          Int       @id @default(autoincrement())
+  profileId   Int       @map("profile_id")
+  profile     Profile   @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  gender      gender    @default(UNKNOWN)
+  dateOfBirth DateTime  @map("date_of_birth") @db.Timestamptz(3)
+  birthTime   DateTime? @map("birth_time") @db.Time()
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt   DateTime  @default(now()) @map("updated_at") @db.Timestamptz(3)
+  name        String
+  birthWeight Int?      @map("birth_weight") @db.SmallInt
+  birthHeight Float?    @map("birth_height")
+  notes       String?
+
+  @@index([profileId])
+  @@map("baby")
+}
+
+model UserAgreement {
+  id       Int      @id @default(autoincrement())
+  userId   String   @unique @map("user_id") @db.Uuid
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  agreedAt DateTime @default(now()) @map("agreed_at") @db.Timestamptz(3)
+
+  @@index([userId])
+  @@map("user_agreement")
+}
+
+model City {
+  id      Int       @id @default(autoincrement())
+  name    String
+  Profile Profile[]
+
+  @@map("city")
+}
+
+model Specialization {
+  id      Int       @id @default(autoincrement())
+  name    String
+  Profile Profile[]
+
+  @@map("specialization")
+}
+
+model Fcmtoken {
+  id     String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  token  String @unique
+  userId String @unique @map("user_id") @db.Uuid
+  User   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("fcm_token")
+}
+
+model Session {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId       String   @map("user_id") @db.Uuid
+  User         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  lastActivity DateTime @default(now()) @map("last_activity") @db.Timestamptz(3)
+  expiresAt    DateTime @map("expires_at") @db.Timestamptz(3)
+  token        String   @unique
+
+  @@index([userId])
+  @@map("session")
+}
+
+// forum
+
+model Tag {
+  id        Int       @id @default(autoincrement())
+  name      String    @unique
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime  @default(now()) @map("updated_at") @db.Timestamptz(3)
+  posts     PostTag[]
+
+  @@map("tag")
+}
+
+model Post {
+  id               String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  title            String?
+  body             String
+  richText         Json             @map("rich_text")
+  parentId         String?          @map("parent_id") @db.Uuid
+  parent           Post?            @relation(name: "PostToParent", fields: [parentId], references: [id], onDelete: SetNull)
+  userId           String?          @map("user_id") @db.Uuid
+  user             User?            @relation(fields: [userId], references: [id], onDelete: SetNull)
+  createdAt        DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt        DateTime         @default(now()) @map("updated_at") @db.Timestamptz(3)
+  lastActivityDate DateTime         @default(now()) @map("last_activity_date") @db.Timestamptz(3)
+  slug             String?
+  postTypeId       Int              @default(1) @map("post_type_id") @db.SmallInt
+  selectedAnswerId String?          @map("selected_answer_id") @db.Uuid
+  selectedAnswer   Post?            @relation(fields: [selectedAnswerId], references: [id], onDelete: SetNull, name: "SelectedAnswer")
+  Comment          Comment[]
+  PostVote         PostVote[]
+  PostTag          PostTag[]
+  postType         PostType         @relation(fields: [postTypeId], references: [id], onDelete: Cascade)
+  Post             Post[]           @relation("PostToParent")
+  BookmarkedPost   BookmarkedPost[]
+  SelectedAnswer   Post[]           @relation("SelectedAnswer")
+
+  @@index([parentId])
+  @@index([userId])
+  @@index([createdAt])
+  @@index([lastActivityDate])
+  @@map("post")
+}
+
+model PostTag {
+  postId    String   @map("post_id") @db.Uuid
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  tagId     Int      @map("tag_id")
+  tag       Tag      @relation(fields: [tagId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  @@id([postId, tagId])
+  @@index([tagId, postId])
+  @@index([tagId])
+  @@map("post_tag")
+}
+
+model Comment {
+  id          String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  postId      String        @map("post_id") @db.Uuid
+  post        Post          @relation(fields: [postId], references: [id], onDelete: Cascade)
+  userId      String?       @map("user_id") @db.Uuid
+  user        User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+  body        String
+  richText    Json          @map("rich_text")
+  createdAt   DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt   DateTime      @default(now()) @map("updated_at") @db.Timestamptz(3)
+  CommentVote CommentVote[]
+
+  @@index([postId])
+  @@index([userId])
+  @@map("comment")
+}
+
+model PostVote {
+  postId     String   @map("post_id") @db.Uuid
+  post       Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  userId     String   @map("user_id") @db.Uuid
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  VoteType   VoteType @relation(fields: [voteTypeId], references: [id])
+  voteTypeId Int      @map("vote_type_id") @db.SmallInt
+
+  @@id([postId, userId])
+  @@unique([postId, userId])
+  @@index([voteTypeId])
+  @@index([userId])
+  @@index([postId, voteTypeId])
+  @@map("post_vote")
+}
+
+model CommentVote {
+  commentId  String   @map("comment_id") @db.Uuid
+  comment    Comment  @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  userId     String   @map("user_id") @db.Uuid
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  VoteType   VoteType @relation(fields: [voteTypeId], references: [id])
+  voteTypeId Int      @map("vote_type_id") @db.SmallInt
+
+  @@id([commentId, userId])
+  @@unique([commentId, userId])
+  @@index([voteTypeId])
+  @@index([userId])
+  @@map("comment_vote")
+}
+
+model BookmarkedPost {
+  userId    String   @map("user_id") @db.Uuid
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  postId    String   @map("post_id") @db.Uuid
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  @@id([userId, postId])
+  @@index([postId])
+  @@index([userId])
+  @@map("bookmarked_post")
+}
+
+model VoteType {
+  id           Int           @id @default(autoincrement()) @db.SmallInt
+  name         String        @unique
+  commentVotes CommentVote[]
+  postVotes    PostVote[]
+
+  @@map("vote_type")
+}
+
+model PostType {
+  id   Int    @id @default(autoincrement()) @db.SmallInt
+  name String @unique
+  Post Post[]
+
+  @@map("post_type")
+}
+
+// enums
+
+enum gender {
+  BOY
+  GIRL
+  UNKNOWN
+}
+
+enum pregnancyType {
+  SINGLE
+  TWIN
+  TRIPLET
+
+  @@map("pregnancy_type")
+}
+
+enum role {
+  USER
+  ADMIN
+  DOCTOR
+}
+
+enum provider {
+  LOCAL
+  GOOGLE
+  ADMIN
+}
+
+enum status {
+  PENDING
+  APPROVED
+  CANCELLED
+
+  @@map("request_status")
+}
+
+enum deliveryType {
+  VAGINAL
+  CESAREAN
+  UNKNOWN
+
+  @@map("delivery_type")
+}
