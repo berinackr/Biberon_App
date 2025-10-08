@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "82560442025",
+    "project_id": "biberon-prod",
+    "storage_bucket": "biberon-prod.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:82560442025:android:3c2cc80d9e353dfd3d93b8",
+        "android_client_info": {
+          "package_name": "com.biberonapp.biberon"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDC098apdlLGL4UJD3ZZqKOLGaoJJo7WpQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -1,0 +1,58 @@
+version: '3.8'
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: dev
+    container_name: biberon-api
+    image: biberon-api-dev
+    user: node
+    restart: unless-stopped
+    develop:
+      watch:
+        - action: sync
+          path: ./src
+          ignore:
+            - .git
+            - node_modules
+            - .env
+            - '*.spec.ts'
+          target: /app/src
+        - action: rebuild
+          path: package.json
+        - action: sync+restart
+          path: ./prisma/migrations
+          target: /app/prisma/migrations
+    volumes:
+      - ./logs:/app/logs
+    ports:
+      - ${PORT}:3000
+    env_file:
+      - docker.env
+    command: sh -c '/opt/startup.relational.dev.sh'
+
+  postgres:
+    image: postgres:14
+    container_name: postgres
+    restart: unless-stopped
+    ports:
+      - 5432:5432
+    environment:
+      POSTGRES_USER: ${DATABASE_USERNAME}
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD}
+      POSTGRES_DB: ${DATABASE_NAME}
+    volumes:
+      - postgres:/var/lib/postgresql/data
+
+  maildev:
+    build:
+      context: .
+      dockerfile: maildev.Dockerfile
+    ports:
+      - ${MAIL_CLIENT_PORT}:1080
+      - ${MAIL_PORT}:1025
+
+volumes:
+  postgres:
+    name: postgres

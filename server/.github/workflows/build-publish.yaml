@@ -1,0 +1,48 @@
+name: Build image and publish to GitHub Container Registry
+
+on:
+  release:
+    types:
+      - published
+permissions: { contents: write, pull-requests: write }
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+jobs:
+  build-and-push-image:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Log in to the Container registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.PAT }}
+      - name: Extract metadata (tags, labels) for Docker
+        id: meta
+        uses: docker/metadata-action@232fc64e3a4e54539e087c5976439ea54be0959d
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+  create-release-branch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Get the release tag
+        id: get_release_tag
+        run: echo "RELEASE_TAG=$(echo ${{ github.event.release.tag_name }} | sed -e 's/^v//')" >> $GITHUB_ENV
+      - name: Create a release branch
+        run: |
+          git checkout -b release/$RELEASE_TAG
+          git push origin release/$RELEASE_TAG
+        env:
+          GITHUB_TOKEN: ${{ secrets.PAT }}

@@ -1,0 +1,49 @@
+version: "3.8"
+services:
+  api:
+    container_name: biberon-api
+    networks:
+      - biberon
+    image: "ghcr.io/av-erencelik/biberon-api:latest"
+    user: node
+    restart: unless-stopped
+    volumes:
+      - ./logs:/app/logs
+    ports:
+      - ${PORT}:3000
+    env_file:
+      - docker.env
+    command: [sh, -c, "npm run migrate:deploy && node dist/prisma/seed.js && /opt/startup.relational.sh"]
+
+  postgres:
+    networks:
+      - biberon
+    image: postgres:14
+    container_name: postgres
+    restart: unless-stopped
+    ports:
+      - 5432:5432
+    environment:
+      POSTGRES_USER: ${DATABASE_USERNAME}
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD}
+      POSTGRES_DB: ${DATABASE_NAME}
+    volumes:
+      - postgres:/var/lib/postgresql/data
+
+  maildev:
+    networks:
+      - biberon
+    build:
+      context: .
+      dockerfile: maildev.Dockerfile
+    ports:
+      - ${MAIL_CLIENT_PORT}:1080
+      - ${MAIL_PORT}:1025
+
+volumes:
+  postgres:
+    name: postgres
+
+networks:
+  biberon:
+    name: biberon

@@ -1,0 +1,39 @@
+name: Check PR
+
+concurrency:
+  group: $-$
+  cancel-in-progress: true
+
+on:
+  pull_request:
+    types:
+      - opened
+      - synchronize
+      - reopened
+    branches:
+      - main
+
+jobs:
+  semantic-pull-request:
+    # check branch name not contains release-please
+    # check if the PR not created by dependabot
+    if: |
+      (
+        !contains(github.head_ref, 'release-please') &&
+        !contains(github.actor, 'dependabot')
+      )
+
+    uses: VeryGoodOpenSource/very_good_workflows/.github/workflows/semantic_pull_request.yml@v1
+
+  build:
+    # check branch name not contains release-please
+    if: |
+      (
+        !contains(github.head_ref, 'release-please') &&
+        !contains(github.actor, 'dependabot')
+      )
+    uses: VeryGoodOpenSource/very_good_workflows/.github/workflows/flutter_package.yml@v1
+    with:
+      flutter_channel: stable
+      flutter_version: 3.19.2
+      min_coverage: 1

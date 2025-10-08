@@ -1,0 +1,88 @@
+name: Check PR
+
+concurrency:
+  group: $-$
+  cancel-in-progress: true
+
+on:
+  pull_request:
+    types:
+      - opened
+      - synchronize
+      - reopened
+    branches:
+      - main
+
+jobs:
+  semantic-pull-request:
+    if: |
+      (
+        !contains(github.head_ref, 'release-please') &&
+        !contains(github.actor, 'dependabot')
+      )
+    uses: VeryGoodOpenSource/very_good_workflows/.github/workflows/semantic_pull_request.yml@v1
+
+  tests:
+    if: |
+      (
+        !contains(github.head_ref, 'release-please') &&
+        !contains(github.actor, 'dependabot')
+      )
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [20.x]
+    needs: semantic-pull-request
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+      - name: Install dependencies
+        run: npm install
+      - name: Run unit tests
+        run: npm run test
+      - name: Install Docker Compose
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y docker-compose
+      - name: create .env file
+        uses: SpicyPizza/create-envfile@v2.0
+        with:
+          envkey_NODE_ENV: test
+          envkey_DATABASE_USERNAME: prisma
+          envkey_DATABASE_PASSWORD: topsecret
+          envkey_DATABASE_NAME: mydb
+          envkey_DATABASE_HOST: localhost
+          envkey_APP_NAME: Biberon
+          envkey_APP_URL: http://localhost:4000
+          envkey_DATABASE_URL: 'postgresql://prisma:topsecret@localhost:5432/mydb?schema=public'
+          envkey_ORGANIZATION: biberon
+          envkey_APP: backend
+          envkey_CONTEXT: test
+          envkey_JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          envkey_JWT_PASSWORD_RESET_EXPIRATION_TIME: 1d
+          envkey_JWT_ACCESS_TOKEN_EXPIRATION_TIME: 10m
+          envkey_REFRESH_TOKEN_EXPIRATION_TIME: 7d
+          envkey_COOKIE_DOMAIN: .localhost
+          envkey_GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+          envkey_GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+          envkey_MAIL_PORT: 1025
+          envkey_MAIL_CLIENT_PORT: 1080
+          envkey_MAIL_HOST: maildev
+          envkey_MAIL_IGNORE_TLS: true
+          envkey_MAIL_SECURE: false
+          envkey_MAIL_REQUIRE_TLS: false
+          envkey_MAIL_DEFAULT_EMAIL: maildev@localhost.com
+          envkey_MAIL_DEFAULT_NAME: api
+          envkey_AWS_S3_ACCESS_KEY: ${{ secrets.AWS_S3_ACCESS_KEY }}
+          envkey_AWS_S3_SECRET_ACCESS_KEY: ${{ secrets.AWS_S3_SECRET_ACCESS_KEY }}
+          envkey_AWS_S3_BUCKET: ${{ secrets.AWS_S3_BUCKET }}
+          envkey_AWS_REGION: ${{ secrets.AWS_REGION }}
+      - name: create local database
+        run: bash ./scripts/run-integration.sh
+      - name: migrate local database
+        run: npm run migrate:deploy
+      - name: run integration tests
+        run: npm run test:e2e

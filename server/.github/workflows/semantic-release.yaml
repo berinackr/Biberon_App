@@ -1,0 +1,20 @@
+name: Prepare Semantic Release
+on:
+  push:
+    branches:
+      - main
+jobs:
+  semantic-release:
+    permissions:
+      contents: write # to create release commit (google-github-actions/release-please-action)
+      pull-requests: write # to create release PR (google-github-actions/release-please-action)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: google-github-actions/release-please-action@v4
+        id: release
+        with:
+          token: ${{ secrets.PAT }}
+          # get current branch name without head refs
+          target-branch: ${{ github.ref_name }}
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json

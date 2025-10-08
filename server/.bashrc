@@ -1,0 +1,1 @@
+history -s "docker compose -f docker-compose.dev.yml watch --no-up"
